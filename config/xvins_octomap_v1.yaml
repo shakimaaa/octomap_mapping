@@ -1,0 +1,12 @@
+xvins_octomap_node:
+  ros__parameters:
+    octomap.resolution: 0.05
+    octomap.prob_hit: 0.7
+    octomap.prob_miss: 0.4
+    octomap.occupancy_thresh: 0.5
+    octomap.pointcloudMaxX: 3.0
+    octomap.pointcloudMinX: 0.0
+    octomap.pointcloudMaxY: 3.0
+    octomap.pointcloudMinY: -3.0
+    octomap.pointcloudMaxZ: 4.0
+    octomap.pointcloudMinZ: -2.0
