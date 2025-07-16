@@ -112,6 +112,8 @@ private:
     
     cv::Mat camera_matrix_;
     Eigen::Matrix4f T_imu_cam_;
+
+    
     
 
     octomap::point3d sensor_origin_;
