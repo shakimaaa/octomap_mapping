@@ -15,6 +15,7 @@ find_package(pcl_conversions REQUIRED)
 find_package(octomap REQUIRED)
 find_package(octomap_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(Eigen3 REQUIRED)
 
 # Include directories
 include_directories(
@@ -29,6 +30,9 @@ add_library(octo_map SHARED
 
 target_link_libraries(octo_map
   ${PCL_LIBRARIES}
+  -loctomap
+  -loctomath
+  
 )
 
 ament_target_dependencies(octo_map
@@ -40,11 +44,12 @@ ament_target_dependencies(octo_map
   octomap_msgs
   octomap
   std_msgs
+  Eigen3
 )
 
 # Executable
 add_executable(xvins_octomap_node src/main.cpp)
-target_link_libraries(xvins_octomap_node octo_map)
+target_link_libraries(xvins_octomap_node octo_map -loctomath  )
 
 ament_target_dependencies(xvins_octomap_node
   rclcpp
@@ -55,6 +60,7 @@ ament_target_dependencies(xvins_octomap_node
   octomap_msgs
   octomap
   std_msgs
+  Eigen3
 )
 
 # Install library
@@ -77,6 +83,6 @@ install(DIRECTORY include/
 # Export include directories
 ament_export_include_directories(include)
 ament_export_libraries(octo_map)
-ament_export_dependencies(rclcpp sensor_msgs  pcl_conversions nav_msgs geometry_msgs )
+ament_export_dependencies(rclcpp sensor_msgs  pcl_conversions nav_msgs geometry_msgs octomap_msgs octomap Eigen3)
 
 ament_package()

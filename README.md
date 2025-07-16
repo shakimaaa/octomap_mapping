@@ -1,2 +1,0 @@
-# octomap_mapping
-octomap
