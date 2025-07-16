@@ -8,10 +8,14 @@
 #include <nav_msgs/msg/path.hpp>
 #include "nav_msgs/msg/odometry.hpp"
 
+#include <cv_bridge/cv_bridge.h>
+#include <opencv2/opencv.hpp>
+
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
-
+#include <pcl_conversions/pcl_conversions.h>
 #include <pcl/filters/passthrough.h>
+#include <pcl/filters/voxel_grid.h>
 
 #include <octomap_msgs/conversions.h>
 #include <octomap_msgs/msg/octomap.hpp>
@@ -38,7 +42,7 @@ public:
    /* Callback Functions */
    void cloudCallback(const sensor_msgs::msg::PointCloud::SharedPtr msg);
    void poseCallback(const nav_msgs::msg::Odometry::SharedPtr msg);
-   void depthCallback(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
+   void depthCallback(const sensor_msgs::msg::Image::SharedPtr msg);
 
    void publishMap();
    void publishCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud);
@@ -72,7 +76,7 @@ private:
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr pose_sub_;
     rclcpp::Publisher<octomap_msgs::msg::Octomap>::SharedPtr octomap_pub_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr point_pub_;
-    rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr depth_cloud_sub_;
+    rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr depth_sub_;
 
     // params
     struct Params {
@@ -106,6 +110,8 @@ private:
 
     Eigen::Matrix3f R;
     
+    cv::Mat camera_matrix_;
+    Eigen::Matrix4f T_imu_cam_;
     
 
     octomap::point3d sensor_origin_;

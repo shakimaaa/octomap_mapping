@@ -12,10 +12,13 @@ find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(pcl_conversions REQUIRED)
+find_package(PCL REQUIRED)
 find_package(octomap REQUIRED)
 find_package(octomap_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(OpenCV REQUIRED)
+find_package(cv_bridge REQUIRED)
 
 # Include directories
 include_directories(
@@ -41,10 +44,13 @@ ament_target_dependencies(octo_map
   nav_msgs
   geometry_msgs
   pcl_conversions
+  PCL
   octomap_msgs
   octomap
   std_msgs
   Eigen3
+  cv_bridge
+  OpenCV
 )
 
 # Executable
@@ -57,10 +63,13 @@ ament_target_dependencies(xvins_octomap_node
   nav_msgs
   geometry_msgs
   pcl_conversions
+  PCL
   octomap_msgs
   octomap
   std_msgs
   Eigen3
+  cv_bridge
+  OpenCV
 )
 
 # Install library
@@ -83,6 +92,6 @@ install(DIRECTORY include/
 # Export include directories
 ament_export_include_directories(include)
 ament_export_libraries(octo_map)
-ament_export_dependencies(rclcpp sensor_msgs  pcl_conversions nav_msgs geometry_msgs octomap_msgs octomap Eigen3)
+ament_export_dependencies(rclcpp sensor_msgs  pcl_conversions PCL nav_msgs geometry_msgs octomap_msgs octomap Eigen3 cv_bridge OpenCV)
 
 ament_package()
