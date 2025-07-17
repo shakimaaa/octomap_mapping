@@ -10,10 +10,10 @@ void OctomapMapper::initMap(std::shared_ptr<rclcpp::Node> node) {
     node_ = node;
 
     // load param
-    node_->declare_parameter("octomap.resolution", 0.1); //0.18 0.05
+    node_->declare_parameter("octomap.resolution", 0.05); //0.18 0.05
     node_->declare_parameter("octomap.prob_hit", 0.7);
     node_->declare_parameter("octomap.prob_miss", 0.45);
-    node_->declare_parameter("octomap.occupancy_thresh", 0.5);
+    node_->declare_parameter("octomap.occupancy_thresh", 0.7);
     node_->declare_parameter("octomap.localmap_thresh", 3.0);
     node_->declare_parameter("octomap.pointcloudMaxX", 4.0);
     node_->declare_parameter("octomap.pointcloudMinX", -4.0);
@@ -93,7 +93,7 @@ void OctomapMapper::depthCallback(const sensor_msgs::msg::Image::SharedPtr msg){
     cv::Mat depth_image = cv_ptr->image;
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_raw(new pcl::PointCloud<pcl::PointXYZ>);
-    static pcl::PointCloud<pcl::PointXYZ>::Ptr  cloud_pub(new pcl::PointCloud<pcl::PointXYZ>);
+     pcl::PointCloud<pcl::PointXYZ>::Ptr  cloud_pub(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZ>);
 
     for (int v = 0; v < depth_image.rows; v += 1) {  
@@ -114,7 +114,7 @@ void OctomapMapper::depthCallback(const sensor_msgs::msg::Image::SharedPtr msg){
                         0, -1,  0,
                         0,  0, -1;
             Eigen::Vector3f t_imu_cam = T_imu_cam_.block<3,1>(0,3);
-            Eigen::Vector3f pt_imu = R_roll_180 * pt_cam + t_imu_cam;
+            Eigen::Vector3f pt_imu = R_roll_180 * pt_cam;
 
             // cloud_raw->points.emplace_back(X, Y, Z);
             cloud_raw->points.emplace_back(pt_imu(0), pt_imu(1), pt_imu(2));
@@ -123,7 +123,7 @@ void OctomapMapper::depthCallback(const sensor_msgs::msg::Image::SharedPtr msg){
 
     pcl::VoxelGrid<pcl::PointXYZ> voxel_grid;
     voxel_grid.setInputCloud(cloud_raw);
-    voxel_grid.setLeafSize(0.25f, 0.25f, 0.25f);  // 2cm voxel size
+    voxel_grid.setLeafSize(0.2f, 0.2f, 0.2f);  // 2cm voxel size
     voxel_grid.filter(*cloud_raw);
 
     pcl::PassThrough<pcl::PointXYZ> pass;
@@ -153,15 +153,15 @@ void OctomapMapper::depthCallback(const sensor_msgs::msg::Image::SharedPtr msg){
 
     publishCloud(cloud_pub);
 
-    //m_octree_->insertPointCloud(octomap_cloud, sensor_origin_);
+    m_octree_->insertPointCloud(octomap_cloud, sensor_origin_);
 
-    //clearOldData(sensor_origin_, mp_.localmap_thresh);
-    // Inflated_octree();
+    clearOldData(sensor_origin_, mp_.localmap_thresh);
+    Inflated_octree();
 
     // Use ray tracing to update octomap
      // insertPointCloud(octomap_cloud);
 
-    //publishMap();
+    publishMap();
 }
 
 void OctomapMapper::cloudCallback(const sensor_msgs::msg::PointCloud::SharedPtr msg){
