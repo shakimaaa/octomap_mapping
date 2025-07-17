@@ -10,11 +10,11 @@ void OctomapMapper::initMap(std::shared_ptr<rclcpp::Node> node) {
     node_ = node;
 
     // load param
-    node_->declare_parameter("octomap.resolution", 0.05); //0.18 0.05
-    node_->declare_parameter("octomap.prob_hit", 0.7);
+    node_->declare_parameter("octomap.resolution", 0.2); //0.18 0.05
+    node_->declare_parameter("octomap.prob_hit", 0.5);
     node_->declare_parameter("octomap.prob_miss", 0.45);
-    node_->declare_parameter("octomap.occupancy_thresh", 0.7);
-    node_->declare_parameter("octomap.localmap_thresh", 3.0);
+    node_->declare_parameter("octomap.occupancy_thresh", 0.5);
+    node_->declare_parameter("octomap.localmap_thresh", 2.0);
     node_->declare_parameter("octomap.pointcloudMaxX", 4.0);
     node_->declare_parameter("octomap.pointcloudMinX", -4.0);
     node_->declare_parameter("octomap.pointcloudMaxY", 1.5);
@@ -22,10 +22,10 @@ void OctomapMapper::initMap(std::shared_ptr<rclcpp::Node> node) {
     node_->declare_parameter("octomap.pointcloudMaxZ", 1.5);
     node_->declare_parameter("octomap.pointcloudMinZ", -1.5);
     node_->declare_parameter("octomap.m_compressMap", true);
-    node_->declare_parameter("octomap.m_Expansion_range_x", 0.12); 
-    node_->declare_parameter("octomap.m_Expansion_range_y", 0.12);
-    node_->declare_parameter("octomap.m_Expansion_range_z", 0.12);
-    node_->declare_parameter("octomap.m_isoccupiedThresh", 0.80);
+    node_->declare_parameter("octomap.m_Expansion_range_x", 0.02); 
+    node_->declare_parameter("octomap.m_Expansion_range_y", 0.02);
+    node_->declare_parameter("octomap.m_Expansion_range_z", 0.02);
+    node_->declare_parameter("octomap.m_isoccupiedThresh", 0.75);
     node_->declare_parameter("buildmapxvins", false);
 
     node_->get_parameter("octomap.resolution", mp_.resolution);
@@ -49,9 +49,9 @@ void OctomapMapper::initMap(std::shared_ptr<rclcpp::Node> node) {
     camera_matrix_ = (cv::Mat_<double>(3, 3) << 424.628, 0,       427.188,
                                                 0,       424.627, 235.672,
                                                 0,       0,       1      );
-     T_imu_cam_ << -0.03188721, -0.10060172,  0.99441566,  -0.21581983,
-                 -0.99882811, -0.03303513, -0.03537076,  -0.10976416,
-                  0.036409,   -0.99437818, -0.09943043, -0.08976416,
+     T_imu_cam_ << -0.03188721, -0.10060172,  0.99441566,  0.21581983,
+                 -0.99882811, -0.03303513, -0.03537076,  0.0, // -0.10976416
+                  0.036409,   -0.99437818, -0.09943043, 0.0,  // -0.08976416
                   0.,          0.,          0.,          1.;
 
     // init OctoMap
@@ -93,7 +93,7 @@ void OctomapMapper::depthCallback(const sensor_msgs::msg::Image::SharedPtr msg){
     cv::Mat depth_image = cv_ptr->image;
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_raw(new pcl::PointCloud<pcl::PointXYZ>);
-     pcl::PointCloud<pcl::PointXYZ>::Ptr  cloud_pub(new pcl::PointCloud<pcl::PointXYZ>);
+    // pcl::PointCloud<pcl::PointXYZ>::Ptr  cloud_pub(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZ>);
 
     for (int v = 0; v < depth_image.rows; v += 1) {  
@@ -114,7 +114,7 @@ void OctomapMapper::depthCallback(const sensor_msgs::msg::Image::SharedPtr msg){
                         0, -1,  0,
                         0,  0, -1;
             Eigen::Vector3f t_imu_cam = T_imu_cam_.block<3,1>(0,3);
-            Eigen::Vector3f pt_imu = R_roll_180 * pt_cam;
+            Eigen::Vector3f pt_imu = R_roll_180 * pt_cam + t_imu_cam;
 
             // cloud_raw->points.emplace_back(X, Y, Z);
             cloud_raw->points.emplace_back(pt_imu(0), pt_imu(1), pt_imu(2));
@@ -123,7 +123,7 @@ void OctomapMapper::depthCallback(const sensor_msgs::msg::Image::SharedPtr msg){
 
     pcl::VoxelGrid<pcl::PointXYZ> voxel_grid;
     voxel_grid.setInputCloud(cloud_raw);
-    voxel_grid.setLeafSize(0.2f, 0.2f, 0.2f);  // 2cm voxel size
+    voxel_grid.setLeafSize(0.08f, 0.08f, 0.08f);  // 2cm voxel size
     voxel_grid.filter(*cloud_raw);
 
     pcl::PassThrough<pcl::PointXYZ> pass;
@@ -145,18 +145,22 @@ void OctomapMapper::depthCallback(const sensor_msgs::msg::Image::SharedPtr msg){
     {   Eigen::Vector3f t(sensor_origin_.x(), sensor_origin_.y(), sensor_origin_.z());
         Eigen::Vector3f Epoint(point.x, point.y, point.z);
         auto Wcloud = R * Epoint + t;
-        cloud_pub->push_back(pcl::PointXYZ(Wcloud.x(), Wcloud.y(), Wcloud.z()));
+        //cloud_pub->push_back(pcl::PointXYZ(Wcloud.x(), Wcloud.y(), Wcloud.z()));
         octomap_cloud.push_back(octomap::point3d(Wcloud.x(), Wcloud.y(), Wcloud.z()));
     }
 
     RCLCPP_INFO(node_->get_logger(), "Depth point cloud size: %zu", octomap_cloud.size());
 
-    publishCloud(cloud_pub);
+    //publishCloud(cloud_pub);
 
     m_octree_->insertPointCloud(octomap_cloud, sensor_origin_);
 
+    if (mp_.m_compressMap) {
+        m_octree_->prune();
+    }
+
     clearOldData(sensor_origin_, mp_.localmap_thresh);
-    Inflated_octree();
+    // Inflated_octree();
 
     // Use ray tracing to update octomap
      // insertPointCloud(octomap_cloud);
@@ -184,7 +188,11 @@ void OctomapMapper::cloudCallback(const sensor_msgs::msg::PointCloud::SharedPtr 
     }
      // Insert point cloud data into OctoMap
      
-     m_octree_->insertPointCloud(octomap_cloud, sensor_origin_);
+    m_octree_->insertPointCloud(octomap_cloud, sensor_origin_);
+
+    if (mp_.m_compressMap) {
+        m_octree_->prune();
+    }
      //clearOldData(sensor_origin_, mp_.localmap_thresh);
      Inflated_octree();
 
@@ -368,7 +376,6 @@ bool OctomapMapper::getInflateOccupancy(const Eigen::Vector3d& pos) {
 
 
 void OctomapMapper::clearOldData(const octomap::point3d& center, double radius) {
-    // 
     octomap::point3d min_bound(
         center.x() - radius,
         center.y() - radius,
@@ -380,26 +387,22 @@ void OctomapMapper::clearOldData(const octomap::point3d& center, double radius) 
         center.z() + radius
     );
 
-    // 
     std::vector<octomap::OcTreeKey> keys_to_delete;
 
-    // 
     for (auto it = m_octree_->begin_leafs(); it != m_octree_->end_leafs(); ++it) {
         const octomap::point3d& point = it.getCoordinate();
         if (point.x() < min_bound.x() || point.x() > max_bound.x() ||
             point.y() < min_bound.y() || point.y() > max_bound.y() ||
             point.z() < min_bound.z() || point.z() > max_bound.z()) {
-            // ??????????
+            // add the key to the deletion list
             keys_to_delete.push_back(it.getKey());
         }
     }
-
-    // ???????
+    // delete nodes outside the bounding box
     for (const auto& key : keys_to_delete) {
-        m_octree_->deleteNode(key, false); // false ???????????
+        m_octree_->deleteNode(key, false); // false means do not prune immediately
     }
-
-    // ?????????
+    // prune the octree to remove empty nodes
     if (mp_.m_compressMap) {
         m_octree_->prune();
     }
