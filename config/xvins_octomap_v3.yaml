@@ -1,0 +1,25 @@
+xvins_octomap_node:
+  ros__parameters:
+    octomap.resolution: 0.3
+    octomap.prob_hit: 0.7
+    octomap.prob_miss: 0.35
+    octomap.occupancy_thresh: 0.8
+    octomap.localmap_thresh: 5.0      # delete map if the occupied cells range is larger than this value
+    octomap.pointcloudMaxX: 5.0
+    octomap.pointcloudMinX: -4.0
+    octomap.pointcloudMaxY: 1.5
+    octomap.pointcloudMinY: -1.5
+    octomap.pointcloudMaxZ: 1.5
+    octomap.pointcloudMinZ: -1.5
+    octomap.m_Expansion_range_x: 0.6  # Map expansion parameters in x
+    octomap.m_Expansion_range_y: 0.6
+    octomap.m_Expansion_range_z: 0.6
+    octomap.m_isoccupiedThresh: 0.8    # Threshold for occupancy
+    octomap.sub_cloud_from_xvins: false # true：Use cloud from XVINS false：Use cloud from depth image
+    octomap.depth_pointcloudMaxX: 8.0  # Maximum X value for depth point cloud
+    octomap.depth_pointcloudMinX: 0.3  # Minimum X value for depth point cloud
+    octomap.depth_voxel_size: 5.0     # Voxel size for depth point cloud processing
+    octomap.sliding_window: true        # Whether to use sliding window for map management
+    octomap.camera_matrix: [424.628, 0, 427.188, 0, 424.627, 235.672, 0, 0, 1] # fx 0 cx 0 fy cy 0 0 1
+    
+    octomap.T_imu_cam: [-0.03188721, -0.10060172,  0.99441566,  0.21581983, -0.99882811, -0.03303513, -0.03537076,  0.0, 0.036409, -0.99437818, -0.09943043, 0.0, 0., 0., 0., 1.]

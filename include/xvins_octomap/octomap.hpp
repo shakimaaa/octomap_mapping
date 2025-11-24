@@ -1,6 +1,8 @@
 #ifndef OCTOMAP_HPP
 #define OCTOMAP_HPP
 
+#define OCTOMAP_NODEBUGOUT
+
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/point_cloud.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
@@ -77,6 +79,9 @@ private:
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr point_pub_;
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr depth_sub_;
 
+    rclcpp::CallbackGroup::SharedPtr cloud_callback_group_;
+    rclcpp::CallbackGroup::SharedPtr odom_callback_group_;
+
     std::mutex octree_mutex_;
 
     // params
@@ -109,6 +114,7 @@ private:
         bool m_loadMap;
         bool m_sildWindow;
         bool m_sub_cloud_from_xvins;
+        bool m_sliding_window; // Whether to use sliding window for map management
 
         std::string map_path;
     } mp_;
@@ -117,6 +123,7 @@ private:
 
     Eigen::Matrix3f R;
     
+    std::vector<double> camera_matrix_vec, t_imu_cam_vec;
     cv::Mat camera_matrix_;
     Eigen::Matrix4f T_imu_cam_;
 
@@ -130,7 +137,7 @@ private:
     octomap::OcTreeKey m_updateBBXMin;
     octomap::OcTreeKey m_updateBBXMax;
 
-   
+    rclcpp::Time current_time;
 };
 
 #endif  // OCTOMAP_HPP
