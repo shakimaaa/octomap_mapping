@@ -1,23 +1,66 @@
 octomap_mapping_node:
   ros__parameters:
+    # OctoMap grid resolution, in meters per voxel.
     octomap.resolution: 0.3
+
+    # Occupancy probability update parameters.
+    # prob_hit increases occupancy when a point hits a voxel.
+    # prob_miss decreases occupancy along free-space rays.
+    # occupancy_thresh is the probability threshold for a voxel to be occupied.
     octomap.prob_hit: 0.7
     octomap.prob_miss: 0.35
     octomap.occupancy_thresh: 0.8
+
+    # Legacy cubic local-map radius. The current sliding-window cleanup uses
+    # localmapMin/MaxX/Y/Z below instead.
     octomap.localmap_thresh: 5.0
+
+    # Maximum ray insertion range for OctoMap insertPointCloud().
+    # Points farther than this range are clipped by OctoMap ray integration.
     octomap.max_range: 5.0
+
+    # Input point-cloud filter bounds around the sensor origin in map frame.
+    # These limits affect only which /lio/cloud_world points are inserted.
     octomap.pointcloudMaxX: 5.0
     octomap.pointcloudMinX: -4.0
     octomap.pointcloudMaxY: 1.5
     octomap.pointcloudMinY: -1.5
     octomap.pointcloudMaxZ: 1.5
     octomap.pointcloudMinZ: -1.5
+
+    # Local map retention bounds around the sensor origin in map frame.
+    # When sliding_window is true, voxels outside this box are deleted.
+    octomap.localmapMaxX: 5.0
+    octomap.localmapMinX: -4.0
+    octomap.localmapMaxY: 1.5
+    octomap.localmapMinY: -1.5
+    octomap.localmapMaxZ: 1.5
+    octomap.localmapMinZ: -1.5
+
+    # Occupancy inflation radius in x/y/z before publishing the map.
     octomap.m_Expansion_range_x: 0.6
     octomap.m_Expansion_range_y: 0.6
     octomap.m_Expansion_range_z: 0.6
+
+    # Occupancy threshold used by getInflateOccupancy().
     octomap.m_isoccupiedThresh: 0.8
+
+    # Enable local-map sliding-window cleanup using localmapMin/MaxX/Y/Z.
     octomap.sliding_window: true
+
+    # Optional dynamic cleanup. If enabled, visible stale occupied voxels are
+    # removed at visibility_cleanup_rate after dynamic_clear_duration seconds
+    # without a new hit.
+    octomap.visibility_cleanup: true
+    octomap.visibility_cleanup_rate: 1.0
+    octomap.dynamic_clear_duration: 1.0
+
+    # Point cloud input and TF frames.
+    # map_frame is the output OctoMap frame.
+    # sensor_frame is used as the ray origin for OctoMap insertion.
     octomap.cloud_topic: /lio/cloud_world
     octomap.map_frame: world
     octomap.sensor_frame: imu
+
+    # TF lookup timeout in seconds.
     octomap.tf_timeout: 0.1

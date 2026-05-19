@@ -20,6 +20,7 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <mutex>
+#include <unordered_map>
 #include <tf2/exceptions.hpp>
 #include <tf2_ros/buffer.hpp>
 #include <tf2_ros/transform_listener.hpp>
@@ -59,6 +60,9 @@ public:
    double getResolution() const;
 
    void clearOldData(const octomap::point3d& center, double radius);
+   void clearOutsideLocalBox();
+   void clearVisibleOccupiedCells(const octomap::Pointcloud& octomap_cloud, double current_time);
+   void updateObservedCells(const octomap::Pointcloud& octomap_cloud, double current_time);
     
 
 private:
@@ -94,6 +98,13 @@ private:
         double m_pointcloudMaxZ;
         double m_pointcloudMinZ;
 
+        double m_localmapMaxX;
+        double m_localmapMinX;
+        double m_localmapMaxY;
+        double m_localmapMinY;
+        double m_localmapMaxZ;
+        double m_localmapMinZ;
+
         double m_Expansion_range_x;
         double m_Expansion_range_y;
         double m_Expansion_range_z;
@@ -106,6 +117,9 @@ private:
         bool m_loadMap;
         bool m_sildWindow;
         bool m_sliding_window; // Whether to use sliding window for map management
+        bool m_visibility_cleanup;
+        double visibility_cleanup_rate;
+        double dynamic_clear_duration;
 
         double tf_timeout;
         std::string cloud_topic;
@@ -120,8 +134,10 @@ private:
     octomap::KeySet occupied_cells;
     octomap::OcTreeKey m_updateBBXMin;
     octomap::OcTreeKey m_updateBBXMax;
+    std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> occupied_last_seen_;
 
     rclcpp::Time current_time;
+    double last_visibility_cleanup_time_{0.0};
 };
 
 #endif  // OCTOMAP_HPP

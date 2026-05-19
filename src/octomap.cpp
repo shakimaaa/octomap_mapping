@@ -24,12 +24,21 @@ void OctomapMapper::initMap(std::shared_ptr<rclcpp::Node> node) {
     node_->declare_parameter("octomap.pointcloudMinY", -1.5);
     node_->declare_parameter("octomap.pointcloudMaxZ", 1.5);
     node_->declare_parameter("octomap.pointcloudMinZ", -1.5);
+    node_->declare_parameter("octomap.localmapMaxX", 4.0);
+    node_->declare_parameter("octomap.localmapMinX", -4.0);
+    node_->declare_parameter("octomap.localmapMaxY", 1.5);
+    node_->declare_parameter("octomap.localmapMinY", -1.5);
+    node_->declare_parameter("octomap.localmapMaxZ", 1.5);
+    node_->declare_parameter("octomap.localmapMinZ", -1.5);
     node_->declare_parameter("octomap.m_compressMap", true);
     node_->declare_parameter("octomap.m_Expansion_range_x", 0.6); 
     node_->declare_parameter("octomap.m_Expansion_range_y", 0.6);
     node_->declare_parameter("octomap.m_Expansion_range_z", 0.6);
     node_->declare_parameter("octomap.m_isoccupiedThresh", 0.8);
     node_->declare_parameter("octomap.sliding_window", true);
+    node_->declare_parameter("octomap.visibility_cleanup", false);
+    node_->declare_parameter("octomap.visibility_cleanup_rate", 1.0);
+    node_->declare_parameter("octomap.dynamic_clear_duration", 1.0);
     node_->declare_parameter("octomap.cloud_topic", "/cloud_registered");
     node_->declare_parameter("octomap.map_frame", "world");
     node_->declare_parameter("octomap.sensor_frame", "");
@@ -47,12 +56,21 @@ void OctomapMapper::initMap(std::shared_ptr<rclcpp::Node> node) {
     node_->get_parameter("octomap.pointcloudMinY", mp_.m_pointcloudMinY);
     node_->get_parameter("octomap.pointcloudMaxZ", mp_.m_pointcloudMaxZ);
     node_->get_parameter("octomap.pointcloudMinZ", mp_.m_pointcloudMinZ);
+    node_->get_parameter("octomap.localmapMaxX", mp_.m_localmapMaxX);
+    node_->get_parameter("octomap.localmapMinX", mp_.m_localmapMinX);
+    node_->get_parameter("octomap.localmapMaxY", mp_.m_localmapMaxY);
+    node_->get_parameter("octomap.localmapMinY", mp_.m_localmapMinY);
+    node_->get_parameter("octomap.localmapMaxZ", mp_.m_localmapMaxZ);
+    node_->get_parameter("octomap.localmapMinZ", mp_.m_localmapMinZ);
     node_->get_parameter("octomap.m_compressMap", mp_.m_compressMap);
     node_->get_parameter("octomap.m_Expansion_range_x", mp_.m_Expansion_range_x);
     node_->get_parameter("octomap.m_Expansion_range_y", mp_.m_Expansion_range_y);
     node_->get_parameter("octomap.m_Expansion_range_z", mp_.m_Expansion_range_z);
     node_->get_parameter("octomap.m_isoccupiedThresh", mp_.m_isoccupiedThresh);
     node->get_parameter("octomap.sliding_window", mp_.m_sliding_window);
+    node_->get_parameter("octomap.visibility_cleanup", mp_.m_visibility_cleanup);
+    node_->get_parameter("octomap.visibility_cleanup_rate", mp_.visibility_cleanup_rate);
+    node_->get_parameter("octomap.dynamic_clear_duration", mp_.dynamic_clear_duration);
     node_->get_parameter("octomap.cloud_topic", mp_.cloud_topic);
     node_->get_parameter("octomap.map_frame", mp_.map_frame);
     node_->get_parameter("octomap.sensor_frame", mp_.sensor_frame);
@@ -62,6 +80,8 @@ void OctomapMapper::initMap(std::shared_ptr<rclcpp::Node> node) {
                 mp_.resolution, mp_.prob_hit, mp_.prob_miss, mp_.occupancy_thresh, mp_.localmap_thresh, mp_.max_range, mp_.m_sliding_window);
     RCLCPP_INFO(node_->get_logger(), "Octomap parameters loaded: pointcloudMaxX=%.2f\n, pointcloudMinX=%.2f\n, pointcloudMaxY=%.2f\n, pointcloudMinY=%.2f\n, pointcloudMaxZ=%.2f\n, pointcloudMinZ=%.2f\n",
                 mp_.m_pointcloudMaxX, mp_.m_pointcloudMinX, mp_.m_pointcloudMaxY, mp_.m_pointcloudMinY, mp_.m_pointcloudMaxZ, mp_.m_pointcloudMinZ);
+    RCLCPP_INFO(node_->get_logger(), "Octomap parameters loaded: localmapMaxX=%.2f\n, localmapMinX=%.2f\n, localmapMaxY=%.2f\n, localmapMinY=%.2f\n, localmapMaxZ=%.2f\n, localmapMinZ=%.2f\n",
+                mp_.m_localmapMaxX, mp_.m_localmapMinX, mp_.m_localmapMaxY, mp_.m_localmapMinY, mp_.m_localmapMaxZ, mp_.m_localmapMinZ);
     RCLCPP_INFO(node_->get_logger(), "Octomap parameters loaded: m_compressMap=%d\n, m_Expansion_range_x=%.2f\n, m_Expansion_range_y=%.2f\n, m_Expansion_range_z=%.2f\n, m_isoccupiedThresh=%.2f\n",
                 mp_.m_compressMap, mp_.m_Expansion_range_x, mp_.m_Expansion_range_y, mp_.m_Expansion_range_z, mp_.m_isoccupiedThresh);
     RCLCPP_INFO(node_->get_logger(), "Octomap TF input: cloud_topic=%s, map_frame=%s, sensor_frame=%s, tf_timeout=%.2f",
@@ -165,12 +185,23 @@ void OctomapMapper::cloudCallback(const sensor_msgs::msg::PointCloud2::SharedPtr
      // Insert point cloud data into OctoMap
 
     std::lock_guard<std::mutex> lock(octree_mutex_);
+    const double now_seconds = node_->now().seconds();
      
+    const bool run_visibility_cleanup =
+        mp_.m_visibility_cleanup &&
+        mp_.visibility_cleanup_rate > 0.0 &&
+        (last_visibility_cleanup_time_ == 0.0 ||
+         now_seconds - last_visibility_cleanup_time_ >= 1.0 / mp_.visibility_cleanup_rate);
+    if (run_visibility_cleanup) {
+        clearVisibleOccupiedCells(octomap_cloud, now_seconds);
+        last_visibility_cleanup_time_ = now_seconds;
+    }
     m_octree_->insertPointCloud(octomap_cloud, sensor_origin_, mp_.max_range, false, true);
+    updateObservedCells(octomap_cloud, now_seconds);
     m_octree_->prune();
 
     if (mp_.m_sliding_window) {
-        clearOldData(sensor_origin_, mp_.localmap_thresh);
+        clearOutsideLocalBox();
     }
 
     Inflated_octree();
@@ -373,4 +404,70 @@ void OctomapMapper::clearOldData(const octomap::point3d& center, double radius) 
     }
 
 
+}
+
+void OctomapMapper::clearOutsideLocalBox() {
+    const octomap::point3d min_bound(
+        sensor_origin_.x() + mp_.m_localmapMinX,
+        sensor_origin_.y() + mp_.m_localmapMinY,
+        sensor_origin_.z() + mp_.m_localmapMinZ
+    );
+    const octomap::point3d max_bound(
+        sensor_origin_.x() + mp_.m_localmapMaxX,
+        sensor_origin_.y() + mp_.m_localmapMaxY,
+        sensor_origin_.z() + mp_.m_localmapMaxZ
+    );
+
+    std::vector<octomap::OcTreeKey> keys_to_delete;
+    for (auto it = m_octree_->begin_leafs(); it != m_octree_->end_leafs(); ++it) {
+        const octomap::point3d& point = it.getCoordinate();
+        if (point.x() < min_bound.x() || point.x() > max_bound.x() ||
+            point.y() < min_bound.y() || point.y() > max_bound.y() ||
+            point.z() < min_bound.z() || point.z() > max_bound.z()) {
+            keys_to_delete.push_back(it.getKey());
+        }
+    }
+
+    for (const auto& key : keys_to_delete) {
+        m_octree_->deleteNode(key, false);
+        occupied_last_seen_.erase(key);
+    }
+}
+
+void OctomapMapper::clearVisibleOccupiedCells(const octomap::Pointcloud& octomap_cloud, double current_time) {
+    octomap::KeySet keys_to_delete;
+    octomap::KeyRay key_ray;
+
+    for (const auto& point : octomap_cloud) {
+        if (!m_octree_->computeRayKeys(sensor_origin_, point, key_ray)) {
+            continue;
+        }
+
+        for (const auto& key : key_ray) {
+            auto* node = m_octree_->search(key);
+            if (!node || !m_octree_->isNodeOccupied(node)) {
+                continue;
+            }
+
+            auto last_seen_it = occupied_last_seen_.find(key);
+            if (last_seen_it == occupied_last_seen_.end() ||
+                current_time - last_seen_it->second > mp_.dynamic_clear_duration) {
+                keys_to_delete.insert(key);
+            }
+        }
+    }
+
+    for (const auto& key : keys_to_delete) {
+        m_octree_->deleteNode(key, false);
+        occupied_last_seen_.erase(key);
+    }
+}
+
+void OctomapMapper::updateObservedCells(const octomap::Pointcloud& octomap_cloud, double current_time) {
+    for (const auto& point : octomap_cloud) {
+        octomap::OcTreeKey key;
+        if (m_octree_->coordToKeyChecked(point, key)) {
+            occupied_last_seen_[key] = current_time;
+        }
+    }
 }
