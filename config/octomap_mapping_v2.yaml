@@ -1,4 +1,4 @@
-xvins_octomap_node:
+octomap_mapping_node:
   ros__parameters:
     octomap.resolution: 0.2
     octomap.prob_hit: 0.7
@@ -15,8 +15,8 @@ xvins_octomap_node:
     octomap.m_Expansion_range_y: 0.02
     octomap.m_Expansion_range_z: 0.02
     octomap.m_isoccupiedThresh: 0.7    # Threshold for occupancy
-    octomap.sub_cloud_from_xvins: false # true：Use cloud from XVINS false：Use cloud from depth image
-    octomap.depth_pointcloudMaxX: 6.0  # Maximum X value for depth point cloud
-    octomap.depth_pointcloudMinX: 0.1  # Minimum X value for depth point cloud
-    octomap.depth_voxel_size: 5.0     # Voxel size for depth point cloud processing
+    octomap.cloud_topic: /cloud_registered
+    octomap.map_frame: world
+    octomap.sensor_frame: ""
+    octomap.tf_timeout: 0.1
     

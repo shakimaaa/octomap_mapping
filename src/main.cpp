@@ -1,9 +1,9 @@
 #include <rclcpp/rclcpp.hpp>
-#include "xvins_octomap/octomap.hpp"
+#include "octomap_mapping/octomap.hpp"
 
 int main(int argc, char** argv) {
     rclcpp::init(argc, argv);
-    auto node = std::make_shared<rclcpp::Node>("xvins_octomap_node");
+    auto node = std::make_shared<rclcpp::Node>("octomap_mapping_node");
 
     rclcpp::executors::MultiThreadedExecutor executor;
     executor.add_node(node);

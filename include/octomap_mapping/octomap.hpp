@@ -4,14 +4,8 @@
 #define OCTOMAP_NODEBUGOUT
 
 #include <rclcpp/rclcpp.hpp>
-#include <sensor_msgs/msg/point_cloud.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
-#include <geometry_msgs/msg/pose_stamped.hpp>
-#include <nav_msgs/msg/path.hpp>
-#include "nav_msgs/msg/odometry.hpp"
-
-#include <cv_bridge/cv_bridge.h>
-#include <opencv2/opencv.hpp>
+#include <geometry_msgs/msg/transform_stamped.hpp>
 
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -26,6 +20,9 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <mutex>
+#include <tf2/exceptions.hpp>
+#include <tf2_ros/buffer.hpp>
+#include <tf2_ros/transform_listener.hpp>
 
 #include <octomap/octomap.h>
 #include <octomap/OcTree.h>
@@ -41,9 +38,7 @@ public:
    std::shared_ptr<octomap::OcTree> getMap() const;
 
    /* Callback Functions */
-   void cloudCallback(const sensor_msgs::msg::PointCloud::SharedPtr msg);
-   void poseCallback(const nav_msgs::msg::Odometry::SharedPtr msg);
-   void depthCallback(const sensor_msgs::msg::Image::SharedPtr msg);
+   void cloudCallback(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
 
    void publishMap(const std::shared_ptr<octomap::OcTree>& octree);
    void publishCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud);
@@ -73,16 +68,15 @@ private:
     std::shared_ptr<octomap::OcTree> m_inflated_octree_;
 
     // ROS sub and pub
-    rclcpp::Subscription<sensor_msgs::msg::PointCloud>::SharedPtr cloud_sub_;
-    rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr pose_sub_;
+    rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_sub_;
     rclcpp::Publisher<octomap_msgs::msg::Octomap>::SharedPtr octomap_pub_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr point_pub_;
-    rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr depth_sub_;
 
     rclcpp::CallbackGroup::SharedPtr cloud_callback_group_;
-    rclcpp::CallbackGroup::SharedPtr odom_callback_group_;
 
     std::mutex octree_mutex_;
+    std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
+    std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 
     // params
     struct Params {
@@ -91,6 +85,7 @@ private:
         double prob_miss;
         double occupancy_thresh;
         double localmap_thresh;
+        double max_range;
 
         double m_pointcloudMaxX;
         double m_pointcloudMinX;
@@ -98,9 +93,6 @@ private:
         double m_pointcloudMinY;
         double m_pointcloudMaxZ;
         double m_pointcloudMinZ;
-
-        double m_depth_pointcloudMaxX;
-        double m_depth_pointcloudMinX;
 
         double m_Expansion_range_x;
         double m_Expansion_range_y;
@@ -113,22 +105,14 @@ private:
         bool m_compressMap;
         bool m_loadMap;
         bool m_sildWindow;
-        bool m_sub_cloud_from_xvins;
         bool m_sliding_window; // Whether to use sliding window for map management
 
+        double tf_timeout;
+        std::string cloud_topic;
+        std::string map_frame;
+        std::string sensor_frame;
         std::string map_path;
     } mp_;
-
-    
-
-    Eigen::Matrix3f R;
-    
-    std::vector<double> camera_matrix_vec, t_imu_cam_vec;
-    cv::Mat camera_matrix_;
-    Eigen::Matrix4f T_imu_cam_;
-
-    
-    
 
     octomap::point3d sensor_origin_;
     octomap::KeyRay m_keyRay;

@@ -1,0 +1,23 @@
+octomap_mapping_node:
+  ros__parameters:
+    octomap.resolution: 0.3
+    octomap.prob_hit: 0.7
+    octomap.prob_miss: 0.35
+    octomap.occupancy_thresh: 0.8
+    octomap.localmap_thresh: 5.0
+    octomap.max_range: 5.0
+    octomap.pointcloudMaxX: 5.0
+    octomap.pointcloudMinX: -4.0
+    octomap.pointcloudMaxY: 1.5
+    octomap.pointcloudMinY: -1.5
+    octomap.pointcloudMaxZ: 1.5
+    octomap.pointcloudMinZ: -1.5
+    octomap.m_Expansion_range_x: 0.6
+    octomap.m_Expansion_range_y: 0.6
+    octomap.m_Expansion_range_z: 0.6
+    octomap.m_isoccupiedThresh: 0.8
+    octomap.sliding_window: true
+    octomap.cloud_topic: /lio/cloud_world
+    octomap.map_frame: world
+    octomap.sensor_frame: imu
+    octomap.tf_timeout: 0.1
